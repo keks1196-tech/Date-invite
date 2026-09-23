@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Приглашение 💜</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(circle at 50% 30%, #8a2be2 0%, #4b0082 55%, #1a0033 100%);
+    color: #fff; text-align: center; overflow-x: hidden;
+  }
+  .page {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: flex-start; min-height: 100vh;
+    padding: 40px 16px 40px; animation: fadeIn 0.5s ease; position: relative;
+  }
+  .page.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  #page1, #page2, #page4, #page5 { justify-content: center; }
+  #page3 { justify-content: flex-start; padding-top: 20px; padding-bottom: 20px; min-height: auto; }
+  .title {
+    font-size: 22px; font-weight: 700; max-width: 340px; line-height: 1.35;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5); margin: 0 0 22px;
+  }
+  .heart-wrap {
+    position: relative; width: min(300px, 75vw); height: min(300px, 75vw);
+    animation: heartbeat 1.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255, 100, 220, 0.75));
+    transition: filter 0.4s ease; margin-bottom: 10px;
+  }
+  .heart-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); } 15% { transform: scale(1.08); }
+    30% { transform: scale(1); } 45% { transform: scale(1.06); }
+  }
+  .heart-wrap.fast {
+    animation: heartbeatFast 0.4s ease-in-out infinite;
+    filter: drop-shadow(0 0 45px rgba(255, 60, 180, 1));
+  }
+  @keyframes heartbeatFast {
+    0%, 100% { transform: scale(1); } 20% { transform: scale(1.18); }
+    40% { transform: scale(1); } 60% { transform: scale(1.14); }
+  }
+  button {
+    border: none; padding: 14px 38px; font-size: 18px; font-weight: 700;
+    border-radius: 50px; cursor: pointer; color: #fff; font-family: inherit;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.5s ease;
+  }
+  .btn-green {
+    background: linear-gradient(135deg, #34c759, #28a745);
+    box-shadow: 0 6px 20px rgba(52,199,89,0.5);
+  }
+  .btn-green:hover { box-shadow: 0 8px 28px rgba(52,199,89,0.8); }
+  .btn-green:active { transform: scale(0.96); }
+  .btn-red {
+    background: linear-gradient(135deg, #ff3b30, #d92c22);
+    box-shadow: 0 6px 20px rgba(255,59,48,0.5);
+    transition: all 0.35s cubic-bezier(.34,1.56,.64,1);
+  }
+  .btn-purple {
+    background: linear-gradient(135deg, #b06dff, #8a2be2);
+    box-shadow: 0 6px 20px rgba(160, 80, 220, 0.5);
+    margin-top: 10px;
+  }
+  .btn-purple:hover { box-shadow: 0 8px 28px rgba(160, 80, 220, 0.8); }
+  .btn-purple:active { transform: scale(0.96); }
+  .hidden { display: none !important; }
+  #buttons1 {
+    margin-top: 26px; display: flex; gap: 18px;
+    align-items: center; justify-content: center;
+    position: relative; min-height: 60px;
+  }
+  #yesBtn {
+    transform-origin: center;
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease;
+  }
+  .picker-card {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 18px 22px; border-radius: 20px;
+    background: rgba(255,255,255,0.10);
+    border: 2px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    margin-bottom: 18px;
+  }
+  .picker-label {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; font-size: 16px; font-weight: 600;
+  }
+  .picker-label span { white-space: nowrap; }
+  #dateInput, #timeInput {
+    padding: 10px 14px; font-size: 16px; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: #fff; font-family: inherit; outline: none;
+    color-scheme: dark;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  #dateInput:focus, #timeInput:focus { border-color: #ff4d94; background: rgba(255,255,255,0.2); }
+  #options {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 14px; width: 100%; max-width: 380px;
+    margin-bottom: 8px; transition: all 0.5s ease;
+  }
+  .card {
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 8px; border-radius: 20px;
+    background: rgba(255,255,255,0.10);
+    border: 2px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    cursor: pointer;
+    transition: transform 0.35s cubic-bezier(.34,1.56,.64,1),
+                opacity 0.4s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+  }
+  .card:hover {
+    transform: translateY(-4px) scale(1.03);
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: 0 12px 32px rgba(255,100,220,0.4);
+  }
+  .card img {
+    width: 90px; height: 90px; object-fit: cover;
+    border-radius: 14px; pointer-events: none;
+  }
+  .card span { font-size: 15px; font-weight: 600; pointer-events: none; }
+  .card.chosen {
+    grid-column: 1 / -1; justify-self: center; align-self: start;
+    width: 75%; max-width: 230px;
+    transform: scale(1.08); transform-origin: top center;
+    padding: 18px 14px; border-color: #ff4d94;
+    box-shadow: 0 0 50px rgba(255,80,180,0.9); z-index: 5;
+  }
+  .card.chosen img { width: 120px; height: 120px; }
+  .card.chosen span { font-size: 18px; }
+  .card.fade-out { opacity: 0; transform: scale(0.4); pointer-events: none; }
+  #msg3 { margin-top: 20px; font-size: 18px; }
+  #next3 { margin-top: 14px !important; padding: 12px 32px; font-size: 17px; }
+  #bgPhotos {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  #bgPhotos img {
+    position: absolute; width: 28vw; max-width: 170px; min-width: 90px;
+    border-radius: 16px; border: 2px solid rgba(255,255,255,0.35);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.5);
+    opacity: 0; transform: scale(0.6) rotate(0deg);
+    transition: opacity 1s ease, transform 1.2s cubic-bezier(.34,1.56,.64,1);
+  }
+  #bgPhotos img.show { opacity: 1; transform: scale(1) rotate(var(--rot, 0deg)); }
+  #page4 .content4 {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    width: 100%; max-width: 420px;
+    padding: 30px 24px 40px;
+    border-radius: 32px;
+    background: radial-gradient(ellipse at center,
+                rgba(26, 0, 51, 0.94) 0%,
+                rgba(26, 0, 51, 0.82) 55%,
+                rgba(26, 0, 51, 0.35) 85%,
+                rgba(26, 0, 51, 0) 100%);
+    backdrop-filter: blur(2px);
+    gap: 18px;
+  }
+  #page4 .top-img {
+    width: min(200px, 55vw);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.3);
+    margin: 0;
+    display: block;
+  }
+  #page4 .heart-wrap { margin: 0; }
+  #page4 #thanks { margin: 0; }
+  #page4 #footer4 { margin-top: 0; }
+  #page4 #next4 { margin-top: 0; }
+  #timer {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; width: 100%; max-width: 420px; margin: 20px 0 24px;
+  }
+  .unit {
+    background: rgba(255,255,255,0.10);
+    border: 2px solid rgba(255,255,255,0.22);
+    border-radius: 18px; padding: 16px 6px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 26px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease;
+  }
+  .unit.pulse {
+    transform: scale(1.06); border-color: #ff4d94;
+    box-shadow: 0 0 30px rgba(255,80,180,0.7);
+  }
+  .unit .num {
+    font-size: 30px; font-weight: 800; line-height: 1;
+    display: block; font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 12px rgba(255,150,220,0.7);
+  }
+  .unit .lbl {
+    font-size: 11px; opacity: 0.7; margin-top: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  #dateDisplay {
+    font-size: 15px; opacity: 0.85; margin-bottom: 18px;
+    padding: 10px 20px; border-radius: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  #finalMsg {
+    font-size: 24px; font-weight: 800; max-width: 320px; margin-top: 10px;
+    opacity: 0; transition: opacity 0.7s ease;
+    text-shadow: 0 0 24px rgba(255,100,220,0.9);
+  }
+  #finalMsg.show { opacity: 1; }
+  .msg {
+    margin-top: 22px; font-size: 20px; font-weight: 600;
+    max-width: 320px; opacity: 0; transform: translateY(10px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .msg.show { opacity: 1; transform: translateY(0); }
+  .bg-heart {
+    position: fixed; color: rgba(255,255,255,0.12);
+    font-size: 24px; pointer-events: none;
+    animation: floatUp linear infinite; z-index: 0;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(100vh) scale(0.6); opacity: 0; }
+    10% { opacity: 0.5; } 90% { opacity: 0.5; }
+    to { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+  }
+  .burst-heart {
+    position: fixed; font-size: 24px; pointer-events: none;
+    z-index: 5; opacity: 1;
+    animation: burstFly 1.2s ease-out forwards;
+  }
+  @keyframes burstFly {
+    0% { transform: translate(0, 0) scale(0.4); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; }
+  }
+  #resetBtn {
+    position: fixed; bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.4); padding: 6px 14px;
+    border-radius: 20px; font-size: 11px;
+    cursor: pointer; font-family: inherit; z-index: 999;
+  }
+</style>
+</head>
+<body>
+
+<section class="page active" id="page1">
+  <div class="heart-wrap">
+    <svg class="heart-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <clipPath id="heartClip">
+          <path d="M50 88 C20 68 5 50 5 32 C5 18 16 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C84 8 95 18 95 32 C95 50 80 68 50 88 Z"/>
+        </clipPath>
+        <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ff4d94"/>
+          <stop offset="100%" stop-color="#c71585"/>
+        </linearGradient>
+      </defs>
+      <image href="https://i.pinimg.com/736x/fe/35/7b/fe357be2549daf3d2baba3032643583b.jpg"
+             x="0" y="0" width="100" height="100"
+             preserveAspectRatio="xMidYMid slice" clip-path="url(#heartClip)"/>
+      <path d="M50 88 C20 68 5 50 5 32 C5 18 16 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C84 8 95 18 95 32 C95 50 80 68 50 88 Z"
+            fill="none" stroke="url(#hg)" stroke-width="2"/>
+    </svg>
+  </div>
+  <div class="title" id="q1">Кроха, ты пойдешь со мной на свидание?</div>
+  <div class="msg" id="warm1">Мне стало теплее от твоего согласия 💜</div>
+  <div id="buttons1">
+    <button id="yesBtn" class="btn-green">Да</button>
+    <button id="noBtn" class="btn-red">НЕТ</button>
+  </div>
+  <button id="next1" class="btn-green hidden" style="margin-top:26px;">Далее →</button>
+</section>
+
+<section class="page" id="page2">
+  <div class="heart-wrap" id="heartWrap2">
+    <svg class="heart-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <clipPath id="heartClip2">
+          <path d="M50 88 C20 68 5 50 5 32 C5 18 16 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C84 8 95 18 95 32 C95 50 80 68 50 88 Z"/>
+        </clipPath>
+      </defs>
+      <image href="https://masterpiecer-images.s3.yandex.net/9db42bd0317411ee8733fad3a2d92a0c:upscaled"
+             x="0" y="0" width="100" height="100"
+             preserveAspectRatio="xMidYMid slice" clip-path="url(#heartClip2)"/>
+      <path d="M50 88 C20 68 5 50 5 32 C5 18 16 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C84 8 95 18 95 32 C95 50 80 68 50 88 Z"
+            fill="none" stroke="url(#hg)" stroke-width="2"/>
+    </svg>
+  </div>
+  <div class="title" id="q2">Когда тебе будет удобно?</div>
+
+  <div id="dateBox">
+    <div class="picker-card">
+      <label class="picker-label"><span>📅 Дата</span>
+        <input type="date" id="dateInput"></label>
+      <label class="picker-label"><span>🕐 Время</span>
+        <input type="time" id="timeInput" step="300" value="19:00"></label>
+    </div>
+    <button id="okBtn" class="btn-green">ОК</button>
+    <button id="surpriseBtn" class="btn-purple">🎁 Доверюсь тебе</button>
+  </div>
+
+  <div class="msg hidden" id="surpriseMsg">Ты заставила мое сердце биться чаще, я все сделаю 💜</div>
+
+  <button id="next2" class="btn-green hidden" style="margin-top:26px;">Далее →</button>
+</section>
+
+<section class="page" id="page3">
+  <div class="title" id="q3">Как бы ты хотела провести наше время?</div>
+  <div id="options">
+    <div class="card" data-choice="Чилл" data-answer="Чилл — это про нас, в твоём стиле 💜"><img src="https://cs12.pikabu.ru/post_img/big/2022/07/02/10/1656779069182520526.png" alt=""><span>Чилл</span></div>
+    <div class="card" data-choice="Ресторан" data-answer="Ресторан — отличный выбор, в твоём стиле 🍷"><img src="https://static.wikitide.net/mylittleponywiki/d/d3/Starlight%2C_Dash%2C_and_Rarity_at_Ponyville_Cafe_S8E17.png" alt=""><span>Ресторан</span></div>
+    <div class="card" data-choice="Кино" data-answer="Кино — идеально для вечера, в твоём стиле 🎬"><img src="https://i.pinimg.com/originals/28/3c/94/283c940d130536c7796f711d1170981a.gif" alt=""><span>Кино</span></div>
+    <div class="card" data-choice="Поиграть" data-answer="Поиграем — будет весело, в твоём стиле 🎮"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT8AC5Ax9vWpFOktcDiEFkMPfx3xseo-ZWQQ3RFjr-Rh0rjxYxIn7EIKzU&s=10" alt=""><span>Поиграть</span></div>
+    <div class="card" data-choice="Удиви меня" data-answer="Обожаю сюрпризы, в твоём стиле ✨" style="grid-column:1/-1;"><img src="https://www.youloveit.ru/uploads/gallery/main/449/my_little_ponyes_spaik07.png" alt=""><span>Удиви меня</span></div>
+  </div>
+  <div class="msg" id="msg3">Оценил твой выбор, в твоём стиле 💜</div>
+  <button id="next3" class="btn-green hidden">Далее →</button>
+
+  <button id="secretBtn" style="
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: none;
+    z-index: 50;
+  "></button>
+
+  <div id="secretOverlay" class="hidden" style="
+    position: fixed; inset: 0;
+    background: rgba(10, 0, 25, 0.92);
+    backdrop-filter: blur(8px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 30px 20px;
+    z-index: 1000;
+    text-align: center;
+  ">
+    <img src="https://i.ibb.co/vCN9K7vX/20260923-040318.jpg"
+         alt=""
+         style="width:min(260px,70vw); border-radius:24px;
+                box-shadow:0 12px 40px rgba(0,0,0,0.6);
+                border: 3px solid rgba(255,255,255,0.3); margin-bottom:24px;">
+    <div style="font-size:28px; font-weight:800; text-shadow:0 0 24px rgba(255,100,220,0.9); margin-bottom:30px;">
+      Попалась! 💜
+    </div>
+    <button id="secretContinue" class="btn-green">Продолжить →</button>
+  </div>
+</section>
+
+<section class="page" id="page4">
+  <div id="bgPhotos"></div>
+  <div class="content4">
+    <img class="top-img"
+         src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcToi6NnEDeKOGYrtPbBWsiZUtgwql21xfuHrnHfWiRzaBG-NjC4jA7iyGE&s=10"
+         alt="">
+
+    <div class="heart-wrap" style="width:min(160px,50vw);height:min(160px,50vw);">
+      <svg class="heart-svg" viewBox="0 0 100 100">
+        <path d="M50 88 C20 68 5 50 5 32 C5 18 16 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C84 8 95 18 95 32 C95 50 80 68 50 88 Z"
+              fill="url(#hg)"/>
+      </svg>
+    </div>
+
+    <div class="title" id="thanks">Спасибо за ответ,<br>люблю тебя 💜</div>
+
+    <div class="msg" id="footer4">С нетерпением жду нашей встречи ✨</div>
+
+    <button id="next4" class="btn-green hidden">К таймеру →</button>
+  </div>
+</section>
+
+<section class="page" id="page5">
+  <svg viewBox="0 0 100 100"
+       style="width:70px;height:70px;animation:heartbeat 1.6s ease-in-out infinite;
+              filter:drop-shadow(0 0 18px rgba(255,100,220,0.8));margin-bottom:22px;">
+    <path d="M50 88 C20 68 5 50 5 32 C5 18 16 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C84 8 95 18 95 32 C95 50 80 68 50 88 Z"
+          fill="url(#hg)"/>
+  </svg>
+  <div class="title">До нашей встречи осталось 💜</div>
+  <div style="font-size:15px;opacity:0.75;margin-bottom:32px;" id="subtitle5">Считаю каждую секунду…</div>
+  <div id="timer">
+    <div class="unit" id="u-days"><span class="num" id="days">00</span><div class="lbl">дней</div></div>
+    <div class="unit" id="u-hours"><span class="num" id="hours">00</span><div class="lbl">часов</div></div>
+    <div class="unit" id="u-mins"><span class="num" id="mins">00</span><div class="lbl">минут</div></div>
+    <div class="unit" id="u-secs"><span class="num" id="secs">00</span><div class="lbl">секунд</div></div>
+  </div>
+  <div id="dateDisplay">—</div>
+  <div id="finalMsg">Да начнётся магия ✨</div>
+</section>
+
+<button id="resetBtn">Давай начнём с начала</button>
+
+<script>
+(function () {
+  'use strict';
+
+  if (window.Telegram && Telegram.WebApp) {
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function show(id) {
+    var pages = document.querySelectorAll('.page');
+    for (var i = 0; i < pages.length; i++) pages[i].classList.remove('active');
+    $(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  var answers = { invitation: null, date: null, time: null, activity: null, surprise: false };
+
+  /* ============================================================
+     📬 ПРЯМАЯ ОТПРАВКА В TELEGRAM — без Pipedream
+     ============================================================ */
+  var BOT_TOKEN = '8876886126:AAGy50HSPHd8PcUedswQtN_mR-yKlATwJwI';
+  var MY_CHAT_ID = '830652672';
+
+  function notifyMe(text) {
+    var encodedText = encodeURIComponent(text);
+    var getUrl = 'https://api.telegram.org/bot' + BOT_TOKEN +
+                 '/sendMessage?chat_id=' + MY_CHAT_ID + '&text=' + encodedText;
+
+    // Способ 1: Image() — обходит CORS
+    try {
+      var img = new Image();
+      img.src = getUrl + '&_t=' + Date.now();
+    } catch (e) {}
+
+    // Способ 2: sendBeacon
+    if (navigator.sendBeacon) {
+      try {
+        var formData = new FormData();
+        formData.append('chat_id', MY_CHAT_ID);
+        formData.append('text', text);
+        navigator.sendBeacon(
+          'https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage',
+          formData
+        );
+      } catch (e) {}
+    }
+
+    // Способ 3: fetch с no-cors
+    try {
+      fetch(getUrl, { method: 'GET', mode: 'no-cors' }).catch(function() {});
+    } catch (e) {}
+  }
+
+  /* ============ СТРАНИЦА 1 ============ */
+  var yesScale = 1, answered1 = false;
+  var noTexts = ['Нет', 'Промахнулась видимо', 'Промахнулась дважды?', 'Может все таки да?...', 'Моё бедное сердечко'];
+  var noIndex = 0;
+
+  function escapeNo() {
+    if (answered1) return;
+    noIndex = Math.min(noIndex + 1, noTexts.length - 1);
+    $('noBtn').textContent = noTexts[noIndex];
+    var newNoScale = Math.max(0.35, 1 - noIndex * 0.14);
+    yesScale = Math.min(1.8, yesScale + 0.16);
+    var dx = (Math.random() - 0.5) * 220;
+    var dy = (Math.random() - 0.5) * 160;
+    $('noBtn').style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + newNoScale + ')';
+    $('yesBtn').style.transform = 'scale(' + yesScale + ')';
+  }
+
+  $('noBtn').addEventListener('click', escapeNo);
+  $('noBtn').addEventListener('mouseenter', escapeNo);
+
+  $('yesBtn').addEventListener('click', function () {
+    if (answered1) return;
+    answered1 = true;
+    answers.invitation = 'Да';
+    fireConfetti();
+    $('buttons1').classList.add('hidden');
+    $('q1').classList.add('hidden');
+    var warmPhrases = [
+      'Моё сердце теперь бьётся чаще 💜',
+      'Ты только что сделала мой день ✨',
+      'Я так и знал, что ты согласишься 💕'
+    ];
+    $('warm1').textContent = warmPhrases[Math.floor(Math.random() * warmPhrases.length)];
+    $('warm1').classList.add('show');
+    setTimeout(function () { $('next1').classList.remove('hidden'); }, 700);
+    notifyMe('💜 Она нажала «Да»!');
+  });
+
+  $('next1').addEventListener('click', function () { show('page2'); });
+
+  /* ============ СТРАНИЦА 2 ============ */
+  var today = new Date().toISOString().split('T')[0];
+  $('dateInput').min = today;
+
+  $('okBtn').addEventListener('click', function () {
+    var d = $('dateInput').value;
+    var t = $('timeInput').value;
+    if (!d || !t) { shake($('dateInput')); shake($('timeInput')); return; }
+    answers.date = d;
+    answers.time = t;
+    answers.surprise = false;
+    $('heartWrap2').classList.add('fast');
+    startBurstHearts();
+    $('dateBox').classList.add('hidden');
+    $('q2').textContent = 'Я запомнил — ' + formatDateTime(d, t) + ' 💜';
+    setTimeout(function () { $('next2').classList.remove('hidden'); }, 900);
+    notifyMe('📅 Она выбрала дату: ' + formatDateTime(d, t));
+  });
+
+  $('surpriseBtn').addEventListener('click', function () {
+    answers.surprise = true;
+    answers.date = null;
+    answers.time = null;
+    $('heartWrap2').classList.add('fast');
+    startBurstHearts();
+    $('dateBox').classList.add('hidden');
+    $('q2').classList.add('hidden');
+    $('surpriseMsg').classList.remove('hidden');
+    $('surpriseMsg').classList.add('show');
+    setTimeout(function () { $('next2').classList.remove('hidden'); }, 700);
+    notifyMe('🎁 Она выбрала сюрприз');
+  });
+
+  $('next2').addEventListener('click', function () {
+    stopBurstHearts();
+    show('page3');
+  });
+
+  /* ============ СТРАНИЦА 3 ============ */
+  var answered3 = false;
+  var cards = document.querySelectorAll('.card');
+  for (var i = 0; i < cards.length; i++) {
+    (function (card) {
+      card.addEventListener('click', function () {
+        if (answered3) return;
+        answered3 = true;
+        var choice = card.dataset.choice;
+        var answer = card.dataset.answer;
+        answers.activity = choice;
+        $('q3').style.opacity = 0;
+        setTimeout(function () { $('q3').classList.add('hidden'); }, 400);
+        card.classList.add('chosen');
+        for (var k = 0; k < cards.length; k++) {
+          if (cards[k] !== card) {
+            cards[k].classList.add('fade-out');
+            (function (c) {
+              setTimeout(function () { c.style.display = 'none'; }, 400);
+            })(cards[k]);
+          }
+        }
+        $('msg3').textContent = answer;
+        $('options').style.gridTemplateColumns = '1fr';
+        $('options').style.justifyItems = 'center';
+        setTimeout(function () { $('msg3').classList.add('show'); }, 400);
+        setTimeout(function () { $('next3').classList.remove('hidden'); }, 1100);
+        notifyMe('🎯 Она выбрала: ' + choice);
+      });
+    })(cards[i]);
+  }
+
+  $('next3').addEventListener('click', function () {
+    show('page4');
+    setTimeout(animatePhotos, 300);
+  });
+
+  /* ============ 🎁 СЕКРЕТНАЯ КНОПКА ============ */
+  $('secretBtn').addEventListener('click', function () {
+    $('secretOverlay').classList.remove('hidden');
+    notifyMe('🎁 Она нашла секретную кнопку!');
+  });
+
+  $('secretContinue').addEventListener('click', function () {
+    $('secretOverlay').classList.add('hidden');
+  });
+
+  /* ============ СТРАНИЦА 4 ============ */
+  function animatePhotos() {
+    var bg = $('bgPhotos');
+    bg.innerHTML = '';
+    var photos = [
+      'https://i.postimg.cc/V6sSfp2z/IMG-20260923-011952-956.jpg',
+      'https://i.postimg.cc/MKHybMPy/Screenshot-20260923-011747-Instagram.jpg',
+      'https://i.postimg.cc/bN516yWx/Screenshot-20260923-011754-Instagram.jpg',
+      'https://i.postimg.cc/QCxczHXr/Screenshot-20260923-011816-Instagram.jpg',
+      'https://i.ibb.co/cKJypyzv/IMG-20260923-040034-585.jpg'
+    ];
+    var zones = [
+      { left: 3,  top: 3  },
+      { left: 69, top: 3  },
+      { left: 3,  top: 67 },
+      { left: 69, top: 67 },
+      { left: 36, top: 3  }
+    ];
+    for (var i = photos.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = photos[i]; photos[i] = photos[j]; photos[j] = tmp;
+    }
+    photos.forEach(function (src, idx) {
+      setTimeout(function () {
+        var img = document.createElement('img');
+        img.src = src;
+        var z = zones[idx];
+        img.style.top  = z.top  + 'vh';
+        img.style.left = z.left + 'vw';
+        img.style.setProperty('--rot', (Math.random() * 16 - 8) + 'deg');
+        bg.appendChild(img);
+        setTimeout(function () { img.classList.add('show'); }, 30);
+      }, idx * 700);
+    });
+    var totalDelay = photos.length * 700 + 500;
+    setTimeout(function () { $('footer4').classList.add('show'); }, totalDelay);
+    setTimeout(function () { $('next4').classList.remove('hidden'); }, totalDelay + 600);
+    setTimeout(function () {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100, spread: 90, origin: { y: 0.35 },
+          colors: ['#ff4d94', '#c71585', '#ffffff', '#ffd700', '#8a2be2']
+        });
+      }
+    }, 1000);
+  }
+
+  $('next4').addEventListener('click', function () {
+    show('page5');
+    startTimer();
+    startFallingConfetti();
+  });
+
+  /* ============ СТРАНИЦА 5 ============ */
+  var timerInterval = null;
+  var targetDate = null;
+  var magicSent = false;
+
+  function startTimer() {
+    if (timerInterval) return;
+
+    if (answers.surprise) {
+      $('days').textContent = '??';
+      $('hours').textContent = '??';
+      $('mins').textContent = '??';
+      $('secs').textContent = '??';
+      $('dateDisplay').textContent = 'Секрет';
+      return;
+    }
+
+    if (answers.date && answers.time) {
+      var ts = new Date(answers.date + 'T' + answers.time).getTime();
+      if (!isNaN(ts)) {
+        targetDate = ts;
+        try { localStorage.setItem('date_datetime', ts); } catch (e) {}
+      }
+    }
+    if (!targetDate) {
+      var saved = null;
+      try { saved = localStorage.getItem('date_datetime'); } catch (e) {}
+      targetDate = saved ? parseInt(saved, 10) : Date.now() + 7 * 24 * 60 * 60 * 1000;
+    }
+    $('dateDisplay').textContent = '📅 ' + formatDate(targetDate);
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  function updateTimer() {
+    if (answers.surprise) return;
+    var diff = targetDate - Date.now();
+    if (diff <= 0) {
+      $('days').textContent = '00';
+      $('hours').textContent = '00';
+      $('mins').textContent = '00';
+      $('secs').textContent = '00';
+      $('timer').style.opacity = 0.35;
+      $('finalMsg').classList.add('show');
+      $('subtitle5').style.display = 'none';
+      sendMagic();
+      return;
+    }
+    var totalSec = Math.floor(diff / 1000);
+    $('days').textContent  = String(Math.floor(totalSec / 86400)).padStart(2,'0');
+    $('hours').textContent = String(Math.floor((totalSec % 86400) / 3600)).padStart(2,'0');
+    $('mins').textContent  = String(Math.floor((totalSec % 3600) / 60)).padStart(2,'0');
+    $('secs').textContent  = String(totalSec % 60).padStart(2,'0');
+    $('u-secs').classList.add('pulse');
+    setTimeout(function () { $('u-secs').classList.remove('pulse'); }, 180);
+  }
+
+  function sendMagic() {
+    if (magicSent) return;
+    magicSent = true;
+    var summary;
+    if (answers.surprise) {
+      summary =
+        '🎁 Она доверила выбор тебе!\n' +
+        'Приглашение: ' + (answers.invitation || '—') + '\n' +
+        'Дата: СЮРПРИЗ (выбираешь ты)\n' +
+        'Активность: ' + (answers.activity || '—');
+    } else {
+      summary =
+        '✨ Она дошла до конца!\n' +
+        'Приглашение: ' + (answers.invitation || '—') + '\n' +
+        'Дата: ' + (answers.date || '—') + '\n' +
+        'Время: ' + (answers.time || '—') + '\n' +
+        'Активность: ' + (answers.activity || '—');
+    }
+    notifyMe(summary);
+  }
+
+  function shake(el) {
+    el.style.borderColor = '#ff3b30';
+    el.animate([
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-6px)' },
+      { transform: 'translateX(6px)' },
+      { transform: 'translateX(0)' }
+    ], { duration: 300 });
+    setTimeout(function () { el.style.borderColor = ''; }, 800);
+  }
+
+  function formatDateTime(iso, time) {
+    var parts = iso.split('-');
+    var months = ['января','февраля','марта','апреля','мая','июня',
+                  'июля','августа','сентября','октября','ноября','декабря'];
+    return parseInt(parts[2]) + ' ' + months[parseInt(parts[1]) - 1] + ', ' + time;
+  }
+
+  function formatDate(ts) {
+    var d = new Date(ts);
+    var months = ['января','февраля','марта','апреля','мая','июня',
+                  'июля','августа','сентября','октября','ноября','декабря'];
+    var hh = String(d.getHours()).padStart(2,'0');
+    var mm = String(d.getMinutes()).padStart(2,'0');
+    return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ', ' + hh + ':' + mm;
+  }
+
+  function fireConfetti() {
+    if (typeof confetti !== 'function') return;
+    var end = Date.now() + 2500;
+    confetti({
+      particleCount: 160, spread: 100, origin: { y: 0.6 },
+      colors: ['#ff4d94','#c71585','#ffffff','#ffd700','#8a2be2']
+    });
+    (function frame() {
+      confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0 } });
+      confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1 } });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    })();
+    for (var i = 0; i < 25; i++) setTimeout(spawnHeart, i * 60);
+  }
+
+  var burstInterval = null;
+
+  function startBurstHearts() {
+    if (burstInterval) return;
+    burstInterval = setInterval(function () {
+      var emojis = ['💜','💖','💕','✨','💗','❤️'];
+      var count = 3 + Math.floor(Math.random() * 3);
+      for (var i = 0; i < count; i++) {
+        (function (idx) {
+          setTimeout(function () {
+            var el = document.createElement('div');
+            el.className = 'burst-heart';
+            el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            var startX = window.innerWidth / 2;
+            var startY = window.innerHeight / 2;
+            el.style.left = startX + 'px';
+            el.style.top  = startY + 'px';
+            var angle = Math.random() * Math.PI * 2;
+            var dist  = 120 + Math.random() * 260;
+            var dx = Math.cos(angle) * dist;
+            var dy = Math.sin(angle) * dist;
+            el.style.setProperty('--dx', dx + 'px');
+            el.style.setProperty('--dy', dy + 'px');
+            el.style.fontSize = (18 + Math.random() * 18) + 'px';
+            document.body.appendChild(el);
+            setTimeout(function () { el.remove(); }, 1400);
+          }, idx * 80);
+        })(i);
+      }
+    }, 500);
+  }
+
+  function stopBurstHearts() {
+    if (burstInterval) {
+      clearInterval(burstInterval);
+      burstInterval = null;
+    }
+  }
+
+  function spawnHeart() {
+    var el = document.createElement('div');
+    el.className = 'bg-heart';
+    var arr = ['💜','💖','✨','💕','🎉'];
+    el.textContent = arr[Math.floor(Math.random() * arr.length)];
+    el.style.left = (Math.random() * 100) + 'vw';
+    el.style.fontSize = (18 + Math.random() * 26) + 'px';
+    el.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 5000);
+  }
+
+  setInterval(function () { if (Math.random() > 0.5) spawnHeart(); }, 2000);
+
+  function startFallingConfetti() {
+    var duration = 8000;
+    var end = Date.now() + duration;
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        startVelocity: 0,
+        ticks: 200,
+        origin: { x: Math.random(), y: -0.1 },
+        colors: ['#ff4d94', '#c71585', '#ffffff', '#ffd700', '#8a2be2', '#ff7eb3'],
+        gravity: 0.6,
+        scalar: 1.1
+      });
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      } else {
+        setTimeout(startFallingConfetti, 3000);
+      }
+    })();
+  }
+
+  $('resetBtn').addEventListener('click', function () {
+    if (confirm('Начать заново?')) {
+      try { localStorage.removeItem('date_datetime'); } catch (e) {}
+      location.reload();
+    }
+  });
+})();
+</script>
+</body>
+</html>
